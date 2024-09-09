@@ -1,0 +1,37 @@
+{
+  "preview_welcome": {
+    "text": "Что умеет этот бот? Привет! Это – официальный чат-бот Bratanbet. Буду твоим Настоящим Братаном , буду держать в курсе последних новостей и акций на сайте , а также регулярно раздавать промокоды на фриспины и фрибеты Чтобы начать , нажми Старт",
+    "videoPath": "/Users/denisbogoslovskiy/WebstormProjects/telegram-bot-retencion/server/uploads/preview_welcome_video.mp4"
+  },
+  "welcome": {
+    "text": "***Давай потвердим твой номер телефона , чтобы Братан точно знал кому отправлять промокод на фриспины или фрибет ***",
+    "videoPath": "/Users/denisbogoslovskiy/WebstormProjects/telegram-bot-retencion/server/uploads/welcome_video.mp4"
+  },
+  "contact": {
+    "text": "Телефон подтвержен! От души , Братан Теперь давай выберем категорию , которая тебя интересует, по после выбора получишь промокод и фрибет",
+    "videoPath": "/Users/denisbogoslovskiy/WebstormProjects/telegram-bot-retencion/server/uploads/contact_video.mp4"
+  },
+  "sports_book": {
+    "text": "Твой промокод на фрибет \n\nХХХХХХХ",
+    "url": "gmail.com",
+    "videoPath": "/Users/denisbogoslovskiy/WebstormProjects/telegram-bot-retencion/server/uploads/sports_book_video.mp4"
+  },
+  "casino": {
+    "text": "Твой промокод на фриспины \n\nХХХХХХХХХХ\n\nописание и условия фриспинов(slot,wager)",
+    "url": "google.com",
+    "videoPath": "/Users/denisbogoslovskiy/WebstormProjects/telegram-bot-retencion/server/uploads/casino_video.mp4"
+  },
+  "live_casino": {
+    "text": "Твой промокод на фрибет\n\nХХХХХХХХХ",
+    "url": "google.com",
+    "videoPath": "/Users/denisbogoslovskiy/WebstormProjects/telegram-bot-retencion/server/uploads/live_casino_video.mp4"
+  },
+  "sport_casino": {
+    "text": "Твой промокод на фриспины \n\nХХХХХХХХХХ\n\nописание и условия фриспинов(slot,wager)",
+    "url": "google.com",
+    "videoPath": "/Users/denisbogoslovskiy/WebstormProjects/telegram-bot-retencion/server/uploads/sport_casino_video.mp4"
+  },
+  "how_use_bonus": {
+    "url": "https://bratanbet.com/ru/"
+  }
+}
