@@ -12,25 +12,36 @@ const Dashboard = () => {
     const [currentView, setCurrentView] = useState('send');
     const [textMessage, setTextMessage] = useState('');
     const [videoFile, setVideoFile] = useState(null);
-    const [updateTextMessage, setUpdateTextMessage] = useState('');
     const [messageStatus, setMessageStatus] = useState('');
     const [userIds, setUserIds] = useState([]);
-    const [userNames, setUserNames] = useState([]);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [selectedContentType, setSelectedContentType] = useState('');
+    const [selectedContentType, setSelectedContentType] = useState('preview_welcome');
     const [contentText, setContentText] = useState('');
-    const [videos, setVideos] = useState({});
     const [videoPreview, setVideoPreview] = useState(null);
     const videoRef = useRef(null);
     const [urls, setUrls] = useState({});
     const [currentUrl, setCurrentUrl] = useState('');
 
     const navigate = useNavigate();
+    const contentTypes = [
+        'preview_welcome', 'welcome', 'contact', 'sports_book',
+        'casino', 'sport_casino', 'live_casino', 'how_use_bonus'
+    ];
+
+    // export const firebaseConfig = {
+    //     apiKey: "AIzaSyBHANT5jst9KpWYAN38ZKwC4FqQMbHh5-Q",
+    //     authDomain: "telegram-d8624.firebaseapp.com",
+    //     projectId: "telegram-d8624",
+    //     storageBucket: "telegram-d8624.appspot.com",
+    //     messagingSenderId: "943102622976",
+    //     appId: "1:943102622976:web:28cc5c97affd7979b207e5"
+    // };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     const BOT_TOKEN = process.env.REACT_APP_BOT_TOKEN;
+    const API_BASE_URL = 'http://77.241.194.38:5001/api';
 
     const fetchUserIds = useCallback(async () => {
         try {
@@ -44,50 +55,41 @@ const Dashboard = () => {
         }
     }, [db]);
 
-    const fetchContent = async (contentType) => {
-        try {
-            const response = await axios.get(`http://localhost:5004/api/get-text/${contentType}`);
-            setContentText(response.data.text);
+    const fetchContent = useCallback(async (contentType) => {
+        if (currentView !== 'update' || !contentType) return;
 
-            const textResponse = await axios.get(`http://localhost:5004/api/get-text/${contentType}`);
+        try {
+            const textResponse = await axios.get(`${API_BASE_URL}/get-text/${contentType}`);
             setContentText(textResponse.data.text);
 
-            const videoUrl = await axios.get(`http://localhost:5004/api/get-video/${contentType}`, {
+            const videoUrl = await axios.get(`${API_BASE_URL}/get-video/${contentType}`, {
                 responseType: 'blob'
             });
 
-            const urlResponse = await axios.get(`http://localhost:5004/api/get-url/${contentType}`);
+            const urlResponse = await axios.get(`${API_BASE_URL}/get-url/${contentType}`);
             setUrls(prevUrls => ({
                 ...prevUrls,
                 [contentType]: urlResponse.data.url || ''
             }));
 
-
-            // Check if the video URL is valid
             if (videoUrl.data && videoUrl.data.size > 0) {
                 const videoObjectUrl = URL.createObjectURL(videoUrl.data);
-                setVideos({
-                    ...videos,
-                    [contentType]: videoObjectUrl
-                });
                 setVideoPreview(videoObjectUrl);
             } else {
-                setVideos({
-                    ...videos,
-                    [contentType]: ''
-                });
                 setVideoPreview(null);
             }
         } catch (error) {
             console.error(`Error fetching ${contentType}:`, error);
-            setMessageStatus(`Failed to fetch ${contentType}. Please try again.`);
+            setMessageStatus(`Failed to fetch ${contentType}. Error: ${error.message}`);
         }
-    };
+    }, [currentView, API_BASE_URL]);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                await fetchContent(selectedContentType);
+                if (currentView === 'update' && selectedContentType) {
+                    await fetchContent(selectedContentType);
+                }
                 await fetchUserIds();
             } catch (error) {
                 console.error('Error fetching data:', error);
@@ -96,7 +98,7 @@ const Dashboard = () => {
         };
 
         fetchData();
-    }, [fetchUserIds, selectedContentType]);
+    }, [fetchUserIds, selectedContentType, currentView, fetchContent]);
 
     const handleTextMessageChange = (e) => setTextMessage(e.target.value);
     const handleVideoChange = (e) => {
@@ -104,32 +106,7 @@ const Dashboard = () => {
         setVideoFile(file);
         setVideoPreview(URL.createObjectURL(file));
     };
-    const handleUpdateTextChange = (e) => setUpdateTextMessage(e.target.value);
-    const handleVideoUpload = async () => {
-        if (!videoFile) {
-            setMessageStatus('Please select a video file');
-            return;
-        }
 
-        const formData = new FormData();
-        formData.append('video', videoFile);
-
-        try {
-            const response = await axios.post(`http://localhost:5004/api/upload-video/${selectedContentType}`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-
-            if (response.data && response.data.message) {
-                setMessageStatus(response.data.message);
-                fetchContent(selectedContentType); // Refresh content after upload
-            } else {
-                setMessageStatus('Unexpected response from server');
-            }
-        } catch (error) {
-            console.error('Error uploading video:', error);
-            setMessageStatus('Failed to upload video. Please try again.');
-        }
-    };
     const sendMessageAndVideoToTelegram = async () => {
         if (!videoFile && !textMessage) {
             setMessageStatus('Please select a video file or enter a text message.');
@@ -179,16 +156,17 @@ const Dashboard = () => {
 
         setTextMessage('');
         setVideoFile(null);
+        setVideoPreview(null);
         setMessageStatus(`Message/Video sent to ${successCount} users. Failed for ${failCount} users.`);
     };
 
     const updateBotContent = async () => {
         try {
-            const textResponse = await axios.post(`http://localhost:5004/api/update-text/${selectedContentType}`, {
+            const textResponse = await axios.post(`${API_BASE_URL}/update-text/${selectedContentType}`, {
                 text: contentText,
             });
 
-            const urlResponse = await axios.post(`http://localhost:5004/api/update-url/${selectedContentType}`, {
+            const urlResponse = await axios.post(`${API_BASE_URL}/update-url/${selectedContentType}`, {
                 url: urls[selectedContentType],
             });
 
@@ -208,24 +186,29 @@ const Dashboard = () => {
         }
     };
 
-    const updateUrl = async () => {
+    const handleVideoUpload = async () => {
+        if (!videoFile) {
+            setMessageStatus('Please select a video file');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('video', videoFile);
+
         try {
-            const response = await axios.post(`http://localhost:5004/api/update-url/${selectedContentType}`, {
-                url: currentUrl,
+            const response = await axios.post(`${API_BASE_URL}/upload-video/${selectedContentType}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
 
             if (response.data && response.data.message) {
-                setMessageStatus(`${selectedContentType} URL updated successfully`);
-                setUrls(prevUrls => ({
-                    ...prevUrls,
-                    [selectedContentType]: response.data.newUrl
-                }));
+                setMessageStatus(response.data.message);
+                await fetchContent(selectedContentType); // Refresh content after upload
             } else {
                 setMessageStatus('Unexpected response from server');
             }
         } catch (error) {
-            console.error('Error updating URL:', error);
-            setMessageStatus('Failed to update URL. Please try again.');
+            console.error('Error uploading video:', error);
+            setMessageStatus(`Failed to upload video for ${selectedContentType}. Error: ${error.message}`);
         }
     };
 
@@ -246,7 +229,6 @@ const Dashboard = () => {
             const usersCollection = collection(db, 'users');
             const userSnapshot = await getDocs(usersCollection);
             const names = userSnapshot.docs.map(doc => doc.data().username);
-            setUserNames(names);
             setMessageStatus(`Fetched ${names.length} user names`);
         } catch (error) {
             console.error('Error fetching user names:', error);
@@ -272,6 +254,14 @@ const Dashboard = () => {
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
+    };
+
+    const handleContentTypeChange = (e) => {
+        const newContentType = e.target.value;
+        setSelectedContentType(newContentType);
+        if (currentView === 'update') {
+            fetchContent(newContentType);
+        }
     };
 
     return (
@@ -321,16 +311,11 @@ const Dashboard = () => {
                         <h2>Update Bot Content</h2>
                         <select
                             value={selectedContentType}
-                            onChange={(e) => setSelectedContentType(e.target.value)}
+                            onChange={handleContentTypeChange}
                         >
-                            <option value="preview_welcome">preview_welcome</option>
-                            <option value="welcome">Welcome </option>
-                            <option value="contact">Contact </option>
-                            <option value="sports_book">sports_book</option>
-                            <option value="casino">casino</option>
-                            <option value="sport_casino">sport_casino</option>
-                            <option value="live_casino">live_casino</option>
-                            <option value="how_use_bonus">How to Use Bonus</option>
+                            {contentTypes.map(type => (
+                                <option key={type} value={type}>{type}</option>
+                            ))}
                         </select>
                         <textarea
                             value={contentText}
@@ -340,17 +325,14 @@ const Dashboard = () => {
                         <div className="url-input-container">
                             <input
                                 type="text"
-                                value={currentUrl}
-                                onChange={(e) => setCurrentUrl(e.target.value)}
+                                value={urls[selectedContentType] || ''}
+                                onChange={(e) => setUrls({...urls, [selectedContentType]: e.target.value})}
                                 placeholder="Enter URL for this section"
                             />
-                            <button onClick={updateUrl}>Update URL</button>
                         </div>
                         <input type="file" accept="video/*" onChange={handleVideoChange} />
-                        {videos[selectedContentType] && (
-                            <>
-                                <video ref={videoRef} controls src={videos[selectedContentType]} width="300" />
-                            </>
+                        {videoPreview && (
+                            <video ref={videoRef} controls src={videoPreview} width="300" />
                         )}
                         <button onClick={handleVideoUpload}>Upload Video</button>
                         <button onClick={updateBotContent}>Update Content</button>

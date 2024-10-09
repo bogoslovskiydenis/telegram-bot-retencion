@@ -11,7 +11,9 @@ app.use(cors());
 
 // Define multer storage and upload middleware
 const upload = multer({ dest: 'uploads/' });
-
+// app.use(cors({
+//     origin: 'http://77.241.194.38:5001'
+// }));
 async function readConfig() {
     try {
         console.log('Reading configuration file...');
@@ -229,7 +231,7 @@ app.get('/api/get-url/:type', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 5004;
+const PORT = 5001;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
