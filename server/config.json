@@ -12,17 +12,17 @@
     "videoPath": "/home/chatbot/server/uploads/contact_video.mp4"
   },
   "sports_book": {
-    "text": "Твой промокод на фрибет \n\nХХХХХХХ",
+    "text": "Твой промокод на фрибет \n\nAZABOT",
     "url": "gmail.com",
     "videoPath": "/home/chatbot/server/uploads/sports_book_video.mp4"
   },
   "casino": {
-    "text": "Твой промокод на фриспины \n\nХХХХХХХХХХ\n\nописание и условия фриспинов(slot,wager)",
-    "url": "google.com",
+    "text": "Твой промокод на фриспины \n\n777\n\nописание и условия фриспинов(slot,wager)",
+    "url": "google1.com",
     "videoPath": "/home/chatbot/server/uploads/casino_video.mp4"
   },
   "live_casino": {
-    "text": "Твой промокод на фрибет\n\nХХХХХХХХХ",
+    "text": "Твой промокод на фрибет\n\n***777***",
     "url": "google.com",
     "videoPath": "/home/chatbot/server/uploads/live_casino_video.mp4"
   },
@@ -32,6 +32,8 @@
     "videoPath": "/home/chatbot/server/uploads/sport_casino_video.mp4"
   },
   "how_use_bonus": {
-    "url": "https://bratanbet.com/ru/"
+    "text": "Туториал , как активировать промокоды(фото, видео, гиф) или отдельная страница на продукте, или в раздел в боте",
+    "url": "https://bratanbet.com/ru/",
+    "videoPath": "/home/chatbot/server/uploads/how_use_bonus_video.mp4"
   }
 }

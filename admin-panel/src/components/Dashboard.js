@@ -28,19 +28,12 @@ const Dashboard = () => {
         'casino', 'sport_casino', 'live_casino', 'how_use_bonus'
     ];
 
-    // export const firebaseConfig = {
-    //     apiKey: "AIzaSyBHANT5jst9KpWYAN38ZKwC4FqQMbHh5-Q",
-    //     authDomain: "telegram-d8624.firebaseapp.com",
-    //     projectId: "telegram-d8624",
-    //     storageBucket: "telegram-d8624.appspot.com",
-    //     messagingSenderId: "943102622976",
-    //     appId: "1:943102622976:web:28cc5c97affd7979b207e5"
-    // };
+
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const BOT_TOKEN = process.env.REACT_APP_BOT_TOKEN;
+    const BOT_TOKEN = "8022134984:AAH3uGzx0OjKNnFFQA6pN2UPwuBipLazEKA";
     const API_BASE_URL = 'http://77.241.194.38:5001/api';
 
     const fetchUserIds = useCallback(async () => {

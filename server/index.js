@@ -4,16 +4,22 @@ const path = require('path');
 const cors = require('cors');
 const multer = require('multer');
 const axios = require('axios');
+const https = require('https');
+const http = require('http');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
-
+// const httpsOptions = {
+//     key: fs.readFileSync('/path/to/your/private.key'),
+//     cert: fs.readFileSync('/path/to/your/certificate.crt'),
+//     ca: fs.readFileSync('/path/to/your/ca_bundle.crt')
+// };
 // Define multer storage and upload middleware
 const upload = multer({ dest: 'uploads/' });
-// app.use(cors({
-//     origin: 'http://77.241.194.38:5001'
-// }));
+app.use(cors({
+    origin: 'http://77.241.194.38:5001'
+}));
 async function readConfig() {
     try {
         console.log('Reading configuration file...');

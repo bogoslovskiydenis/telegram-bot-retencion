@@ -3,22 +3,15 @@ import {initializeApp} from 'firebase/app';
 import {getFirestore, doc, setDoc} from 'firebase/firestore';
 import 'dotenv/config';
 import axios from "axios";
+import {firebaseConfig} from "./firebase.js";
 
-const token = "8022134984:AAH3uGzx0OjKNnFFQA6pN2UPwuBipLazEKA";
+const token = process.env.BOT_TOKEN;
 const bot = new TelegramBot(token, {polling: true});
-export const firebaseConfig = {
-    apiKey: "AIzaSyBHANT5jst9KpWYAN38ZKwC4FqQMbHh5-Q",
-    authDomain: "telegram-d8624.firebaseapp.com",
-    projectId: "telegram-d8624",
-    storageBucket: "telegram-d8624.appspot.com",
-    messagingSenderId: "943102622976",
-    appId: "1:943102622976:web:28cc5c97affd7979b207e5"
-};
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const API_URL = "http://77.241.194.38:5001"
+const API_URL = process.env.SERVER_URL
 // Функция записи user_id в Firebase
 const writeUserData = async (userId, firstName, username, phoneNumber) => {
     try {
@@ -33,6 +26,17 @@ const writeUserData = async (userId, firstName, username, phoneNumber) => {
         console.error('Error writing user data to Firestore:', error);
     }
 };
+
+async function getContentFromServer(contentType) {
+    try {
+        const response = await axios.get(`${API_URL}/api/get-text/${contentType}`);
+        return response.data.text;
+    } catch (error) {
+        console.error(`Error fetching ${contentType} from server:`, error.message);
+        return null;
+    }
+}
+
 async function getVideoUrlFromServer(contentType) {
     if (!contentType) {
         console.error('Content type is undefined');
@@ -46,15 +50,7 @@ async function getVideoUrlFromServer(contentType) {
         return null;
     }
 }
-async function getContentFromServer(contentType) {
-    try {
-        const response = await axios.get(`${API_URL}/api/get-text/${contentType}`);
-        return response.data.text;
-    } catch (error) {
-        console.error(`Error fetching ${contentType} from server:`, error.message);
-        return null;
-    }
-}
+
 async function getVideoFromServer(contentType) {
     if (!contentType) {
         console.error('Content type is undefined');
@@ -70,6 +66,7 @@ async function getVideoFromServer(contentType) {
         return null;
     }
 }
+
 async function getUrlFromServer(contentType) {
     if (!contentType) {
         console.error('Content type is undefined');
@@ -83,6 +80,98 @@ async function getUrlFromServer(contentType) {
         return null;
     }
 }
+
+
+bot.onText(/\/start/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const firstName = msg.from.first_name;
+    const username = msg.from.username || '';
+
+    try {
+        // Write userId to Firestore
+        await writeUserData(userId, firstName, username);
+
+        const getWelcomeVideoPreview = await getVideoFromServer("preview_welcome");
+        await bot.sendVideo(chatId, getWelcomeVideoPreview);
+        const welcomeMessage = await getContentFromServer("preview_welcome");
+        await bot.sendMessage(chatId, welcomeMessage, {
+            reply_markup: {
+                keyboard: [
+                    [{ text: 'Старт' }]
+                ],
+                resize_keyboard: true,
+                one_time_keyboard: true
+            }
+        });
+    } catch (error) {
+        console.error('Error handling /start command:', error);
+    }
+});
+
+async function sendPhoneNumberInstructions(chatId) {
+    try {
+        await bot.sendMessage(chatId, 'Пожалуйста, введите ваш номер телефона в формате: 79XXXXXXXXXX (10 цифр, начиная с 7).Братан если не получается нажми кнопку ниже , поделиться номером телефона', {
+            reply_markup: {
+                keyboard: [
+                    [{ text: 'Поделиться номером телефона', request_contact: true }],
+                    // [{ text: 'Вернуться' }]
+                ],
+                resize_keyboard: true,
+                one_time_keyboard: true
+            }
+        });
+    } catch (err) {
+        console.error('Error sending phone number instructions:', err);
+    }
+}
+
+bot.on('message', async (msg) => {
+    const chatId = msg.chat.id;
+
+    if (msg.text && msg.text.toLowerCase() === 'старт') {
+        const videoPath = await getVideoFromServer('welcome');
+        const welcomeText = await getContentFromServer('welcome');
+
+        try {
+            await bot.sendVideo(chatId, videoPath);
+            await bot.sendMessage(chatId, welcomeText, {
+                reply_markup: {
+                    keyboard: [
+                        [{ text: 'Поделиться номером телефона', request_contact: true }],
+                        [{ text: 'Ввести номер вручную' }]
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true
+                },
+                parse_mode: 'Markdown'
+            });
+        } catch (err) {
+            console.error('Error sending content:', err);
+            await bot.sendMessage(chatId, 'Извините, произошла ошибка. Попробуйте позже.');
+        }
+    }
+
+    // Обработка кнопки "Ввести номер вручную"
+    else if (msg.text && msg.text === 'Ввести номер вручную') {
+        await sendPhoneNumberInstructions(chatId);
+    }
+
+    // // Обработка номера, отправленного через "Поделиться номером телефона"
+    // else if (msg.contact) {
+    //     const phoneNumber = msg.contact.phone_number;
+    //     await handlePhoneNumber(msg, phoneNumber, false); // Без проверки номера
+    // }
+
+    // Обработка вручную введенного номера
+    else if (msg.text && msg.text.startsWith('7')) {
+        if (validatePhoneNumber(msg.text)) {
+            await handlePhoneNumber(msg, msg.text, true); // С проверкой
+        } else {
+            await bot.sendMessage(chatId, 'Пожалуйста, введите номер телефона в правильном формате: 79XXXXXXXXXX (10 цифр, начиная с 7).Братан если не получается нажми кнопку ниже , поделиться номером телефона');
+        }
+    }
+});
 async function handlePhoneNumber(msg, phoneNumber, validate) {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
@@ -91,7 +180,7 @@ async function handlePhoneNumber(msg, phoneNumber, validate) {
 
     // Проверка формата номера телефона, если это ввод вручную
     if (validate && !validatePhoneNumber(phoneNumber)) {
-        await bot.sendMessage(chatId, 'Пожалуйста, введите номер телефона в правильном формате: 79XXXXXXXXXX (12 цифр, начиная с 7).');
+        await bot.sendMessage(chatId, 'Пожалуйста, введите номер телефона в правильном формате: 79XXXXXXXXXX (10 цифр, начиная с 7).Братан если не получается нажми кнопку ниже , поделиться номером телефона');
         return;
     }
 
@@ -119,9 +208,10 @@ async function handlePhoneNumber(msg, phoneNumber, validate) {
         });
     } catch (error) {
         console.error('Ошибка при сохранении номера телефона в Firestore:', error);
-        // await bot.sendMessage(chatId, 'Извините, произошла ошибка при сохранении номера телефона.');
+        await bot.sendMessage(chatId, 'Извините, произошла ошибка при сохранении номера телефона.');
     }
 }
+
 function validatePhoneNumber(phoneNumber) {
     // Проверяем, содержит ли ввод недопустимые символы
     if (/[a-zA-Zа-яА-Я]/.test(phoneNumber)) {
@@ -147,99 +237,6 @@ function validatePhoneNumber(phoneNumber) {
 
     return false; // Номер не соответствует ожидаемому формату
 }
-async function sendPhoneNumberInstructions(chatId) {
-    try {
-        await bot.sendMessage(chatId, 'Пожалуйста, введите ваш номер телефона в формате: 79XXXXXXXXXX (12 цифр, начиная с 7) Либо нажми кнопку ниже "Подельться номером телефона"', {
-            reply_markup: {
-                keyboard: [
-                    [{ text: 'Поделиться номером телефона', request_contact: true }],
-                    // [{ text: 'Вернуться' }]
-                ],
-                resize_keyboard: true,
-                one_time_keyboard: true
-            }
-        });
-    } catch (err) {
-        console.error('Error sending phone number instructions:', err);
-    }
-}
-bot.onText(/\/start/, async (msg) => {
-    const chatId = msg.chat.id;
-    const userId = msg.from.id;
-    const firstName = msg.from.first_name;
-    const username = msg.from.username || '';
-
-    try {
-        // Write userId to Firestore
-        await writeUserData(userId, firstName, username);
-
-        const getWelcomeVideoPreview = await getVideoFromServer("preview_welcome");
-        await bot.sendVideo(chatId, getWelcomeVideoPreview);
-        const welcomeMessage = await getContentFromServer("preview_welcome");
-        await bot.sendMessage(chatId, welcomeMessage, {
-            reply_markup: {
-                keyboard: [
-                    [{ text: 'Старт' }]
-                ],
-                resize_keyboard: true,
-                one_time_keyboard: true
-            }
-        });
-    } catch (error) {
-        console.error('Error handling /start command:', error);
-    }
-});
-bot.on('message', async (msg) => {
-    const chatId = msg.chat.id;
-
-    if (msg.text && msg.text.toLowerCase() === 'старт') {
-        const videoPath = await getVideoFromServer('welcome');
-        const welcomeText = await getContentFromServer('welcome');
-
-        try {
-            await bot.sendVideo(chatId, videoPath);
-            await bot.sendMessage(chatId, welcomeText, {
-                reply_markup: {
-                    keyboard: [
-                        [{ text: 'Поделиться номером телефона', request_contact: true }],
-                        [{ text: 'Ввести номер вручную' }]
-                    ],
-                    resize_keyboard: true,
-                    one_time_keyboard: true
-                },
-                parse_mode: 'Markdown'
-            });
-        } catch (err) {
-            console.error('Error sending content:', err);
-            // await bot.sendMessage(chatId, 'Извините, произошла ошибка. Попробуйте позже.');
-        }
-    }
-
-    // Обработка кнопки "Ввести номер вручную"
-    else if (msg.text && msg.text === 'Ввести номер вручную') {
-        await sendPhoneNumberInstructions(chatId);
-    }
-
-    // Обработка кнопки "Вернуться" — возврат к меню выбора номера
-    // else if (msg.text && msg.text === 'Вернуться') {
-    //     await showPhoneNumberMenu(chatId);  // Возвращаемся в меню выбора номера
-    // }
-
-    // Обработка номера, отправленного через "Поделиться номером телефона"
-    // else if (msg.contact) {
-    //     const phoneNumber = msg.contact.phone_number;
-    //     await handlePhoneNumber(msg, phoneNumber, false); // Без проверки номера
-    // }
-
-    // Обработка вручную введенного номера
-    else if (msg.text && msg.text.startsWith('7')) {
-        if (validatePhoneNumber(msg.text)) {
-            await handlePhoneNumber(msg, msg.text, true); // С проверкой
-        } else {
-            await bot.sendMessage(chatId, 'Пожалуйста, введите номер телефона в правильном формате: 79XXXXXXXXXX (10 цифр, начиная с 7). Либо нажми кнопку ниже "Подельться номером телефона"');
-        }
-    }
-});
 
 bot.on('contact', async (msg) => {
     const chatId = msg.chat.id;
@@ -249,15 +246,13 @@ bot.on('contact', async (msg) => {
     const phoneNumber = msg.contact.phone_number;
 
     try {
+        const videoContactPath = await getVideoFromServer("contact");
+
         // Update the user data in Firebase with the phone number
         await writeUserData(userId, firstName, username, phoneNumber);
-
-        const videoContactPath = await getVideoFromServer("contact");
         await bot.sendVideo(chatId, videoContactPath);
-
         console.log('Phone number saved successfully');
         const contactMessage = await getContentFromServer('contact');
-
         // Send a confirmation message
         await bot.sendMessage(chatId, contactMessage);
 
@@ -373,18 +368,20 @@ bot.on('callback_query', async (callbackQuery) => {
             });
             break;
         case'how_use_bonus':
-            const howToUseMessage = 'Туториал , как активировать промокоды(фото, видео, гиф) \n\n или отдельная страница на продукте, или в раздел в боте '
+            const howToUseMessage = await getContentFromServer('how_use_bonus')
             const howToUseUrl = await getUrlFromServer('how_use_bonus');
-            const videoContactPath = await getVideoFromServer("contact")
-            await bot.sendVideo(chatId, videoContactPath)
-            await bot.sendMessage(chatId, howToUseMessage, {
+            const videoContactPath = await getVideoFromServer("how_use_bonus")
+
+            const howToUseOptions = {
                 reply_markup: {
                     inline_keyboard: [
                         [{text: 'АКТИВИРОВАТЬ', url: howToUseUrl}],
                         [{text: 'НА ГЛАВНУЮ', callback_data: 'back_to_start'}]
                     ]
                 }
-            })
+            }
+            await bot.sendVideo(chatId, videoContactPath)
+            await bot.sendMessage(chatId, howToUseMessage, howToUseOptions);
             break;
     }
 });
